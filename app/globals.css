@@ -1,321 +1,132 @@
-html {
-  scroll-behavior: smooth;
+const dashboardStats = [
+  { label: 'Total reports', value: '1,284', tone: 'blue' },
+  { label: 'Pending review', value: '214', tone: 'amber' },
+  { label: 'In progress', value: '96', tone: 'purple' },
+  { label: 'Resolved', value: '974', tone: 'green' },
+];
+
+const reports = [
+  {
+    id: '#RS-1042',
+    title: 'Large pothole near bus stop',
+    location: 'North Avenue, Sector 7',
+    status: 'In Progress',
+    severity: 'High',
+    due: 'Today',
+  },
+  {
+    id: '#RS-1009',
+    title: 'Broken guard rail near school',
+    location: 'Lakeside Drive',
+    status: 'Pending',
+    severity: 'Medium',
+    due: '2 days',
+  },
+  {
+    id: '#RS-983',
+    title: 'Cracked pedestrian crossing',
+    location: 'Sunset Road',
+    status: 'Resolved',
+    severity: 'Low',
+    due: 'Completed',
+  },
+  {
+    id: '#RS-970',
+    title: 'Open manhole near intersection',
+    location: 'Central Junction',
+    status: 'Under Review',
+    severity: 'High',
+    due: 'Today',
+  },
+];
+
+const statusStyles: Record<string, string> = {
+  Pending: 'status pending',
+  'In Progress': 'status in-progress',
+  Resolved: 'status resolved',
+  'Under Review': 'status review',
+};
+
+const severityStyles: Record<string, string> = {
+  High: 'severity high',
+  Medium: 'severity medium',
+  Low: 'severity low',
+};
+
+export default function AdminPage() {
+  return (
+    <main className="admin-shell">
+      <aside className="admin-sidebar">
+        <div className="sidebar-brand">
+          <div className="brand-mark">RS</div>
+          <div>
+            <strong>RoadSafe</strong>
+            <span>Admin Console</span>
+          </div>
+        </div>
+
+        <nav className="admin-nav">
+          <a className="active" href="#">Overview</a>
+          <a href="#">Reports</a>
+          <a href="#">Map</a>
+          <a href="#">Users</a>
+          <a href="#">Settings</a>
+        </nav>
+      </aside>
+
+      <section className="admin-main">
+        <header className="admin-header">
+          <div>
+            <span className="eyebrow dark">Operations dashboard</span>
+            <h1>Road safety overview</h1>
+          </div>
+          <button className="primary-button small-btn">Export report</button>
+        </header>
+
+        <div className="dashboard-stats">
+          {dashboardStats.map((card) => (
+            <div className={`stat-box ${card.tone}`} key={card.label}>
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+            </div>
+          ))}
+        </div>
+
+        <div className="admin-panel">
+          <div className="panel-head">
+            <h2>Active reports</h2>
+            <button className="ghost-button">Filter</button>
+          </div>
+
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Report ID</th>
+                  <th>Issue</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Severity</th>
+                  <th>Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reports.map((report) => (
+                  <tr key={report.id}>
+                    <td>{report.id}</td>
+                    <td>{report.title}</td>
+                    <td>{report.location}</td>
+                    <td><span className={statusStyles[report.status]}>{report.status}</span></td>
+                    <td><span className={severityStyles[report.severity]}>{report.severity}</span></td>
+                    <td>{report.due}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #f4f7fb;
-  color: #0d172a;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-.page-shell {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px 20px 80px;
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 32px;
-  padding: 12px 0;
-}
-
-.brand-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 1.5rem;
-  font-weight: 800;
-}
-
-.brand-mark {
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #0f172a, #2563eb);
-  color: #fff;
-  font-size: 1rem;
-}
-
-.nav-links {
-  display: flex;
-  gap: 24px;
-  color: #334155;
-  font-weight: 600;
-}
-
-.hero {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 32px;
-  align-items: center;
-  padding: 32px 0 48px;
-}
-
-.eyebrow {
-  margin: 0 0 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  color: #2563eb;
-  font-weight: 700;
-}
-
-.hero-copy h1 {
-  margin: 0 0 16px;
-  font-size: clamp(2.5rem, 4vw, 4rem);
-  line-height: 1.05;
-}
-
-.hero-text {
-  margin: 0;
-  color: #475569;
-  max-width: 600px;
-  line-height: 1.7;
-  font-size: 1.05rem;
-}
-
-.hero-actions {
-  display: flex;
-  gap: 16px;
-  margin-top: 28px;
-  flex-wrap: wrap;
-}
-
-.primary-button,
-.secondary-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.9rem 1.4rem;
-  border-radius: 12px;
-  font-weight: 700;
-  transition: transform 0.2s ease;
-  border: 1px solid transparent;
-  cursor: pointer;
-}
-
-.primary-button {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: white;
-  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.25);
-}
-
-.secondary-button {
-  background: white;
-  color: #0f172a;
-  border-color: rgba(15, 23, 42, 0.08);
-}
-
-.primary-button:hover,
-.secondary-button:hover {
-  transform: translateY(-1px);
-}
-
-.hero-panel {
-  background: linear-gradient(135deg, #0f172a, #1e293b);
-  color: white;
-  border-radius: 28px;
-  padding: 28px;
-  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.18);
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.stat-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 16px;
-  padding: 20px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.stat-card strong {
-  font-size: 1.8rem;
-}
-
-.stat-card span {
-  color: #cbd5e1;
-}
-
-.feature-section,
-.report-section,
-.about-section {
-  padding: 64px 0 0;
-}
-
-.section-header {
-  text-align: center;
-  margin-bottom: 28px;
-}
-
-.section-header.left-align {
-  text-align: left;
-}
-
-.section-header h2 {
-  margin: 0;
-  font-size: clamp(1.8rem, 3vw, 2.7rem);
-}
-
-.feature-grid,
-.steps-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.feature-card,
-.step-card {
-  background: white;
-  padding: 24px;
-  border-radius: 22px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.03);
-}
-
-.feature-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #eff6ff;
-  font-size: 1.4rem;
-  margin-bottom: 18px;
-}
-
-.feature-card h3,
-.step-card h3 {
-  margin: 0 0 10px;
-}
-
-.feature-card p,
-.step-card p {
-  margin: 0;
-  color: #475569;
-  line-height: 1.6;
-}
-
-.report-form {
-  background: white;
-  border-radius: 24px;
-  padding: 28px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.04);
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.field.full {
-  grid-column: 1 / -1;
-}
-
-.field label {
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.field input,
-.field select,
-.field textarea {
-  width: 100%;
-  padding: 0.85rem 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  border-radius: 12px;
-  background: #f8fafc;
-  color: #0f172a;
-}
-
-.field input:focus,
-.field select:focus,
-.field textarea:focus {
-  outline: 2px solid rgba(37, 99, 235, 0.2);
-  border-color: #60a5fa;
-}
-
-.report-form .primary-button {
-  margin-top: 24px;
-  width: 100%;
-}
-
-.form-message {
-  margin-top: 18px;
-  border-radius: 12px;
-  padding: 0.9rem 1rem;
-  font-weight: 600;
-}
-
-.form-message.success {
-  color: #166534;
-  background: #dcfce7;
-}
-
-.form-message.error {
-  color: #991b1b;
-  background: #fee2e2;
-}
-
-.step-card span {
-  display: inline-block;
-  margin-bottom: 12px;
-  color: #2563eb;
-  font-size: 1.1rem;
-  font-weight: 800;
-}
-
-@media (max-width: 860px) {
-  .hero,
-  .field-grid,
-  .feature-grid,
-  .steps-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .nav-links {
-    display: none;
-  }
-
-  .topbar {
-    margin-bottom: 12px;
-  }
-}
