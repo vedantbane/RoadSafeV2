@@ -2,17 +2,20 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 const reportSchema = z.object({
-  title: z.string().min(3).max(200),
-  category: z.string().min(2).max(80),
-  description: z.string().min(10).max(2000),
+  title: z.string().trim().min(3).max(200),
+  category: z.string().trim().min(2).max(80),
+  description: z.string().trim().min(10).max(2000),
   severity: z.enum(['low', 'medium', 'high']).default('medium'),
-  locationName: z.string().min(2).max(255),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
-  reporterName: z.string().max(120).optional(),
+  locationName: z.string().trim().min(2).max(255),
+  latitude: z.number().finite().optional(),
+  longitude: z.number().finite().optional(),
+  reporterName: z.string().trim().max(120).optional(),
   reporterEmail: z.string().email().optional().or(z.literal('')),
-  reporterPhone: z.string().max(50).optional(),
+  reporterPhone: z.string().trim().max(50).optional(),
   imageUrl: z.string().url().optional(),
   userId: z.string().uuid().optional(),
 });
@@ -58,35 +61,15 @@ export async function POST(request: Request) {
     } = parsed.data;
 
     const sql = getDb();
-
     const [report] = await sql`
       INSERT INTO reports (
-        user_id,
-        title,
-        category,
-        description,
-        severity,
-        location_name,
-        latitude,
-        longitude,
-        reporter_name,
-        reporter_email,
-        reporter_phone,
-        image_url
+        user_id, title, category, description, severity, location_name,
+        latitude, longitude, reporter_name, reporter_email, reporter_phone, image_url
       )
       VALUES (
-        ${userId ?? null},
-        ${title},
-        ${category},
-        ${description},
-        ${severity},
-        ${locationName},
-        ${latitude ?? null},
-        ${longitude ?? null},
-        ${reporterName ?? null},
-        ${reporterEmail || null},
-        ${reporterPhone || null},
-        ${imageUrl ?? null}
+        ${userId ?? null}, ${title}, ${category}, ${description}, ${severity}, ${locationName},
+        ${latitude ?? null}, ${longitude ?? null}, ${reporterName || null},
+        ${reporterEmail || null}, ${reporterPhone || null}, ${imageUrl ?? null}
       )
       RETURNING *
     `;

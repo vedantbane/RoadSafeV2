@@ -2,8 +2,21 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+export async function GET(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
+    }
+
+    const payload = verifyToken(authHeader.slice(7));
+    if (payload.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
+    }
+
     const sql = getDb();
     const reports = await sql`SELECT * FROM reports ORDER BY created_at DESC`;
     return NextResponse.json(reports);
@@ -16,38 +29,33 @@ export async function GET() {
 export async function PATCH(request: Request) {
   try {
     const authHeader = request.headers.get('authorization');
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
-    const token = authHeader.split(' ')[1];
-    const payload = verifyToken(token);
-
+    const payload = verifyToken(authHeader.slice(7));
     if (payload.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { id, status, severity } = body;
-
-    if (!id) {
-      return NextResponse.json({ error: 'Missing report id.' }, { status: 400 });
+    const { id, status, severity } = await request.json();
+    if (!id) return NextResponse.json({ error: 'Missing report id.' }, { status: 400 });
+    if (status && !['pending', 'under_review', 'in_progress', 'resolved', 'rejected'].includes(status)) {
+      return NextResponse.json({ error: 'Invalid status.' }, { status: 400 });
+    }
+    if (severity && !['low', 'medium', 'high'].includes(severity)) {
+      return NextResponse.json({ error: 'Invalid severity.' }, { status: 400 });
     }
 
     const sql = getDb();
-
     const [updated] = await sql`
       UPDATE reports
-      SET status = ${status ?? 'pending'}, severity = ${severity ?? 'medium'}, updated_at = NOW()
+      SET status = ${status ?? 'pending'}, severity = ${severity ?? 'medium'}
       WHERE id = ${id}
       RETURNING *
     `;
 
-    if (!updated) {
-      return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
-    }
-
+    if (!updated) return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Update report error:', error);

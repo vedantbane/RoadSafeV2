@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+type RouteContext = { params: { id: string } };
+
+export async function GET(_request: Request, { params }: RouteContext) {
   try {
     const sql = getDb();
     const [report] = await sql`SELECT * FROM reports WHERE id = ${params.id}`;
@@ -20,18 +22,23 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: Request, { params }: RouteContext) {
   try {
     const body = await request.json();
-    const { status, severity } = body;
-    const sql = getDb();
+    const status = body.status;
+    const severity = body.severity;
 
+    if (status !== undefined && !['pending', 'under_review', 'in_progress', 'resolved', 'rejected'].includes(status)) {
+      return NextResponse.json({ error: 'Invalid status.' }, { status: 400 });
+    }
+    if (severity !== undefined && !['low', 'medium', 'high'].includes(severity)) {
+      return NextResponse.json({ error: 'Invalid severity.' }, { status: 400 });
+    }
+
+    const sql = getDb();
     const [updated] = await sql`
       UPDATE reports
-      SET status = ${status ?? 'pending'}, severity = ${severity ?? 'medium'}, updated_at = NOW()
+      SET status = ${status ?? 'pending'}, severity = ${severity ?? 'medium'}
       WHERE id = ${params.id}
       RETURNING *
     `;
