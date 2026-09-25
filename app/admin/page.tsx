@@ -1,246 +1,285 @@
-import Link from 'next/link';
+'use client';
 
-const stats = [
-  { value: '12.4k+', label: 'Reports filed' },
-  { value: '3.8k', label: 'Resolved fixes' },
-  { value: '91%', label: 'Priority issues flagged' },
-  { value: '24/7', label: 'Community alerts' },
-];
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 
-const featureCards = [
-  {
-    icon: '⚡',
-    title: 'Fast issue reporting',
-    text: 'Submit a pothole, crack, debris or hazard in under a minute with mobile-friendly forms.',
-  },
-  {
-    icon: '📍',
-    title: 'Geo-aware tracking',
-    text: 'Capture location context and route high-risk areas to the right maintenance teams quickly.',
-  },
-  {
-    icon: '🛠️',
-    title: 'Actionable prioritization',
-    text: 'Sort by urgency, severity, and repair status so dangerous zones get attention first.',
-  },
-  {
-    icon: '🤝',
-    title: 'Community driven',
-    text: 'Turn resident observations into measurable public-safety improvements for every neighborhood.',
-  },
-];
+type Report = {
+  id: string;
+  title: string;
+  location_name?: string;
+  category?: string;
+  status?: string;
+  severity?: string;
+  created_at?: string;
+  reporter_name?: string | null;
+};
 
-const steps = [
-  { number: '01', title: 'Spot an issue', text: 'Notice a pothole, damaged road, or obstacle while commuting or walking.' },
-  { number: '02', title: 'Report instantly', text: 'Add location, image, category, and priority details in a single form.' },
-  { number: '03', title: 'Track and fix', text: 'Authorities and civic teams can monitor, validate, and resolve reported hazards.' },
-];
+const statusStyles: Record<string, string> = {
+  pending: 'status pending',
+  under_review: 'status review',
+  in_progress: 'status in-progress',
+  resolved: 'status resolved',
+  rejected: 'status rejected',
+};
 
-export default function HomePage() {
+const severityStyles: Record<string, string> = {
+  low: 'severity low',
+  medium: 'severity medium',
+  high: 'severity high',
+  critical: 'severity high',
+};
+
+function formatStatus(value?: string) {
+  if (!value) return 'Pending';
+  return value
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+export default function AdminPage() {
+  const [token, setToken] = useState<string | null>(null);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [loginError, setLoginError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem('roadsafe-admin-token');
+    if (savedToken) {
+      setToken(savedToken);
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+
+    async function fetchReports() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/admin/reports', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Session expired or unauthorized');
+        }
+
+        const data = await response.json();
+        setReports(Array.isArray(data) ? data : []);
+        setError('');
+      } catch (err) {
+        console.error(err);
+        localStorage.removeItem('roadsafe-admin-token');
+        setToken(null);
+        setError('Your admin session expired. Please log in again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchReports();
+  }, [token]);
+
+  const metrics = useMemo(() => {
+    const total = reports.length;
+    const pending = reports.filter((r) => (r.status || 'pending') === 'pending').length;
+    const inProgress = reports.filter((r) => (r.status || 'pending') === 'in_progress').length;
+    const resolved = reports.filter((r) => (r.status || 'pending') === 'resolved').length;
+
+    return [
+      { label: 'Total reports', value: String(total), tone: 'blue' },
+      { label: 'Pending review', value: String(pending), tone: 'amber' },
+      { label: 'In progress', value: String(inProgress), tone: 'purple' },
+      { label: 'Resolved', value: String(resolved), tone: 'green' },
+    ];
+  }, [reports]);
+
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAuthLoading(true);
+    setLoginError('');
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginForm),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Unable to sign in');
+      }
+
+      if (data.user?.role !== 'admin') {
+        throw new Error('This account does not have admin access');
+      }
+
+      localStorage.setItem('roadsafe-admin-token', data.token);
+      setToken(data.token);
+      setLoginForm({ email: '', password: '' });
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'Unable to sign in');
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('roadsafe-admin-token');
+    setToken(null);
+    setReports([]);
+    setError('');
+  }
+
+  if (!token) {
+    return (
+      <main className="login-shell">
+        <div className="login-card">
+          <div className="sidebar-brand centered-brand">
+            <div className="brand-mark">RS</div>
+            <div>
+              <strong>RoadSafe</strong>
+              <span>Admin access</span>
+            </div>
+          </div>
+
+          <h1>Sign in to continue</h1>
+          <p>Only authorized admin accounts can manage road reports.</p>
+
+          <form onSubmit={handleLogin} className="admin-login-form">
+            <label>
+              Email
+              <input
+                type="email"
+                value={loginForm.email}
+                onChange={(event) => setLoginForm((prev) => ({ ...prev, email: event.target.value }))}
+                placeholder="admin@roadsafe.com"
+                required
+              />
+            </label>
+
+            <label>
+              Password
+              <input
+                type="password"
+                value={loginForm.password}
+                onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
+                placeholder="Your secure password"
+                required
+              />
+            </label>
+
+            {loginError ? <div className="auth-error">{loginError}</div> : null}
+
+            <button type="submit" className="primary-button" disabled={authLoading}>
+              {authLoading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className="page-shell landing-shell">
-      <header className="topbar">
-        <div className="brand-wrap">
+    <main className="admin-shell">
+      <aside className="admin-sidebar">
+        <div className="sidebar-brand">
           <div className="brand-mark">RS</div>
-          <span>RoadSafe</span>
+          <div>
+            <strong>RoadSafe</strong>
+            <span>Admin Console</span>
+          </div>
         </div>
 
-        <nav className="nav-links" aria-label="Main navigation">
-          <Link href="#features">Features</Link>
-          <Link href="#report">Report</Link>
-          <Link href="#impact">Impact</Link>
-          <Link href="/admin">Admin</Link>
+        <nav className="admin-nav">
+          <a className="active" href="#">Overview</a>
+          <a href="#">Reports</a>
+          <a href="#">Map</a>
+          <a href="#">Users</a>
+          <a href="#">Settings</a>
         </nav>
-      </header>
 
-      <section className="hero-section">
-        <div className="hero-copy">
-          <span className="eyebrow">Public safety intelligence</span>
-          <h1>Safer roads start with residents like you.</h1>
-          <p className="hero-text">
-            RoadSafe helps communities report dangerous road conditions, monitor repair progress,
-            and give city teams the information they need to act fast.
-          </p>
+        <button className="secondary-button logout-button" onClick={handleLogout}>Log out</button>
+      </aside>
 
-          <div className="hero-actions">
-            <a href="#report" className="primary-button">Report a problem</a>
-            <Link href="#features" className="secondary-button">Explore features</Link>
+      <section className="admin-main">
+        <header className="admin-header">
+          <div>
+            <span className="eyebrow dark">Operations dashboard</span>
+            <h1>Road safety overview</h1>
           </div>
+          <button className="primary-button small-btn">Export report</button>
+        </header>
 
-          <div className="mini-trust-row">
-            <span>Trusted by civic teams</span>
-            <span>•</span>
-            <span>Live road hazard monitoring</span>
-          </div>
-        </div>
+        {error ? <div className="auth-error admin-alert">{error}</div> : null}
 
-        <div className="hero-panel">
-          <div className="panel-header">
-            <span className="live-pill">Live coverage</span>
-            <span className="muted-text">Updated 2 mins ago</span>
-          </div>
-
-          <div className="stats-grid">
-            {stats.map((stat) => (
-              <div className="stat-card" key={stat.label}>
-                <strong>{stat.value}</strong>
-                <span>{stat.label}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="status-list">
-            <div className="status-item">
-              <span className="dot blue" />
-              <span>High-severity potholes</span>
-              <strong>38</strong>
-            </div>
-            <div className="status-item">
-              <span className="dot amber" />
-              <span>Needs review</span>
-              <strong>12</strong>
-            </div>
-            <div className="status-item">
-              <span className="dot green" />
-              <span>Resolved this week</span>
-              <strong>126</strong>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="features" className="feature-section">
-        <div className="section-header centered-header">
-          <span className="eyebrow">Why RoadSafe?</span>
-          <h2>Built to turn local observations into safer streets.</h2>
-        </div>
-
-        <div className="feature-grid">
-          {featureCards.map((feature) => (
-            <article className="feature-card" key={feature.title}>
-              <div className="feature-icon">{feature.icon}</div>
-              <h3>{feature.title}</h3>
-              <p>{feature.text}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section id="report" className="report-section">
-        <div className="section-header left-align">
-          <span className="eyebrow">Submit a report</span>
-          <h2>Report a road hazard near you.</h2>
-        </div>
-
-        <div className="report-shell">
-          <div className="report-intro">
-            <h3>What we track</h3>
-            <ul>
-              <li>Potholes and cracked roads</li>
-              <li>Flooded, blocked, or unsafe intersections</li>
-              <li>Debris, broken barriers, and exposed hazards</li>
-              <li>Street lighting and visibility issues</li>
-            </ul>
-            <div className="intro-card">
-              <strong>Fast action</strong>
-              <p>Reports are prioritized by severity, impact, and location so the most urgent repairs are addressed first.</p>
-            </div>
-          </div>
-
-          <div className="form-card-wrapper">
-            <form className="report-form">
-              <div className="field-grid">
-                <div className="field">
-                  <label htmlFor="title">Issue title</label>
-                  <input id="title" placeholder="Large pothole outside school gate" />
-                </div>
-
-                <div className="field">
-                  <label htmlFor="location">Location</label>
-                  <input id="location" placeholder="Main street, bus stop area" />
-                </div>
-
-                <div className="field">
-                  <label htmlFor="category">Category</label>
-                  <select id="category" defaultValue="Pothole">
-                    <option>Pothole</option>
-                    <option>Road Crack</option>
-                    <option>Debris / Obstacle</option>
-                    <option>Open Manhole / Hazard</option>
-                    <option>Other</option>
-                  </select>
-                </div>
-
-                <div className="field">
-                  <label htmlFor="severity">Severity</label>
-                  <select id="severity" defaultValue="medium">
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-
-                <div className="field full">
-                  <label htmlFor="description">Description</label>
-                  <textarea id="description" rows={5} placeholder="Describe the issue, size, depth, and risk to drivers or pedestrians" />
-                </div>
-
-                <div className="field">
-                  <label htmlFor="name">Reporter name</label>
-                  <input id="name" placeholder="Optional" />
-                </div>
-
-                <div className="field">
-                  <label htmlFor="email">Email</label>
-                  <input id="email" type="email" placeholder="Optional" />
-                </div>
-              </div>
-
-              <button type="button" className="primary-button">Submit report</button>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <section id="impact" className="impact-section">
-        <div className="section-header centered-header">
-          <span className="eyebrow">Impact</span>
-          <h2>How this improves public safety.</h2>
-        </div>
-
-        <div className="impact-grid">
-          <div className="impact-card">
-            <span className="impact-number">72%</span>
-            <p>Faster response times for dangerous road conditions when residents report issues in real time.</p>
-          </div>
-          <div className="impact-card">
-            <span className="impact-number">4.9/5</span>
-            <p>Civic satisfaction scores for transparent issue tracking and public communication.</p>
-          </div>
-          <div className="impact-card">
-            <span className="impact-number">1M+</span>
-            <p>Routine trips made safer through better hazard visibility and faster maintenance scheduling.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="steps-section">
-        <div className="section-header centered-header">
-          <span className="eyebrow">How it works</span>
-          <h2>Three simple steps to create safer streets.</h2>
-        </div>
-
-        <div className="steps-grid">
-          {steps.map((step) => (
-            <div className="step-card" key={step.number}>
-              <span>{step.number}</span>
-              <h3>{step.title}</h3>
-              <p>{step.text}</p>
+        <div className="dashboard-stats">
+          {metrics.map((card) => (
+            <div className={`stat-box ${card.tone}`} key={card.label}>
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
             </div>
           ))}
+        </div>
+
+        <div className="admin-panel">
+          <div className="panel-head">
+            <h2>Active reports</h2>
+            <button className="ghost-button">Filter</button>
+          </div>
+
+          <div className="table-wrap">
+            {loading ? (
+              <div className="table-empty">Loading reports...</div>
+            ) : reports.length === 0 ? (
+              <div className="table-empty">No reports have been submitted yet.</div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Report ID</th>
+                    <th>Issue</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Severity</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reports.map((report) => (
+                    <tr key={report.id}>
+                      <td>{report.id.slice(0, 8).toUpperCase()}</td>
+                      <td>{report.title}</td>
+                      <td>{report.location_name || '—'}</td>
+                      <td>
+                        <span className={statusStyles[(report.status || 'pending').toLowerCase()] || 'status pending'}>
+                          {formatStatus(report.status)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={severityStyles[(report.severity || 'medium').toLowerCase()] || 'severity medium'}>
+                          {String(report.severity || 'Medium').charAt(0).toUpperCase() + String(report.severity || 'Medium').slice(1)}
+                        </span>
+                      </td>
+                      <td>{report.created_at ? new Date(report.created_at).toLocaleDateString() : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       </section>
     </main>
   );
 }
-
