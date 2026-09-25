@@ -1,36 +1,29 @@
 # RoadSafe
 
-RoadSafe is a production-ready road hazard reporting platform built with Next.js and Neon Postgres.
+RoadSafe is a Next.js road-hazard reporting application backed by Neon Postgres.
 
-## Tech stack
-- Next.js 14
-- React 18
-- Neon Postgres
-- JWT auth
-- Zod validation
+## Deploy on Vercel
 
-## Local setup
+1. Import `vedantbane/RoadSafeV2` into Vercel.
+2. Use the default Next.js framework preset. The repository already includes the build configuration.
+3. Add these environment variables in the Vercel project settings:
+   - `DATABASE_URL` — Neon Postgres connection string.
+   - `JWT_SECRET` — a long, random production secret.
+   - `NEXT_PUBLIC_APP_URL` — the deployed site URL, for example `https://your-project.vercel.app`.
+4. Run `database/schema.sql` once against the Neon database.
+5. Deploy.
 
-1. Install dependencies:
-   npm install
-2. Copy `.env.example` to `.env.local` and fill values.
-3. Create the database schema in Neon using `database/schema.sql`.
-4. Run the app:
-   npm run dev
+Vercel installs dependencies with the lockfile/package manifest and runs `npm run build`.
 
-## Production deployment on Vercel
+## Local development
 
-1. Push the repo to GitHub.
-2. Import the project into Vercel.
-3. Set environment variables in Vercel:
-   - DATABASE_URL
-   - JWT_SECRET
-   - NEXT_PUBLIC_APP_URL
-4. Deploy.
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
 
-## Database schema
-
-Use the SQL in `database/schema.sql`.
+Open <http://localhost:3000>.
 
 ## API routes
 
@@ -39,7 +32,4 @@ Use the SQL in `database/schema.sql`.
 - `GET /api/reports`
 - `POST /api/reports`
 - `PATCH /api/reports/[id]`
-
-## Notes
-
-The earlier HTML version was converted into a React + Next.js app to support real backend storage, auth, and Vercel deployment.
+- `GET/PATCH /api/admin/reports`

@@ -1,0 +1,13 @@
+# Do not upload the previous static prototype and archive to Vercel.
+# The deployable application is the Next.js app under app/.
+index.html
+home.html
+about.html
+account.html
+admin.html
+report.html
+reports.html
+settings.html
+tips.html
+zipFile.zip
+ADMIN_SETUP.md

@@ -1,6 +1,5 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "installCommand": "rm -f package-lock.json && npm install --registry=https://registry.npmjs.org",
   "buildCommand": "npm run build"
 }
